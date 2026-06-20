@@ -71,6 +71,12 @@ Patient context can be a photo of handwritten clinical notes:
 
 ![Explain expanded](screenshots/output-explain.png)
 
+**Add medication during visit** — type any drug name (English or French) to get RAMQ exception codes and an interaction check against the reviewed regimen; the form collapses once results are shown
+
+![Add medication result](screenshots/output-add-medication.png)
+
+**Copy** — each panel has a copy button (top-right) that copies the section's text to the clipboard, ready to paste into an EMR or clinical note.
+
 ## Setup
 
 ```bash
