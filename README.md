@@ -8,7 +8,7 @@ A no-login web app that takes a patient's active medication list — pasted text
 - **Clinical-pharmacist review** — normalized medication list, interaction flags (Severe / Moderate / Mild), inferred diagnoses, and recommended actions. Powered by Claude Opus 4.8 with adaptive thinking.
 - **Optional patient context** — attach lab results, referral letters, or free-text notes (eGFR, allergies, recent hospitalizations) to sharpen the analysis.
 - **Add medication during visit** — type any drug name (English or French) to get an instant interaction check against the reviewed regimen and the matching RAMQ exception codes.
-- **RAMQ formulary lookup** — offline SQLite search across all 158 exception drugs and 242 codes. Bilingual: English or French input works; indication texts are returned in English.
+- **RAMQ formulary lookup** — offline SQLite search across all 158 exception drugs and 242 codes. Bilingual: English or French input works; indication texts are returned in English. This is a bonus for Quebec practitioners
 
 ## How it works
 
