@@ -67,7 +67,7 @@ Patient context can be a photo of handwritten clinical notes:
 
 ![Output grid bottom](screenshots/output-grid-bottom.png)
 
-**Explain** — click any flag or action to get a 2–3 sentence clinical explanation of the mechanism and the specific risk
+**Explain** — If your intuition feels like AI got something wrong, click any flag or action to get a 2–3 sentence clinical explanation of the mechanism and the specification, or see if it rethinks its output
 
 ![Explain expanded](screenshots/output-explain.png)
 
