@@ -1,4 +1,4 @@
-"""Flask app: a search box where a clinician types a scenario and gets cited codes."""
+"""Flask app: a no-login page to analyze a patient's medication list."""
 import os
 
 from dotenv import load_dotenv
@@ -7,9 +7,11 @@ from flask import Flask, jsonify, render_template, request
 load_dotenv()
 
 # Import after load_dotenv so the Anthropic client picks up ANTHROPIC_API_KEY.
-from app import rag  # noqa: E402
+from app import analyze as analyzer  # noqa: E402
 
 app = Flask(__name__)
+# Anthropic request limit is 32 MB; cap uploads a little under that.
+app.config["MAX_CONTENT_LENGTH"] = 30 * 1024 * 1024
 
 
 @app.route("/")
@@ -17,26 +19,27 @@ def index():
     return render_template("index.html")
 
 
-@app.route("/api/lookup", methods=["POST"])
-def api_lookup():
-    question = (request.json or {}).get("question", "").strip()
-    if not question:
-        return jsonify({"error": "Empty question."}), 400
-    try:
-        response = rag.lookup(question)
-    except FileNotFoundError as e:
-        return jsonify({"error": str(e)}), 500
+@app.route("/api/analyze", methods=["POST"])
+def api_analyze():
+    text = request.form.get("text", "")
+    files = []
+    for storage in request.files.getlist("files"):
+        if not storage.filename:
+            continue
+        files.append((storage.filename, storage.read(), storage.mimetype))
 
-    usage = response.usage
+    try:
+        answer, usage = analyzer.analyze(text, files)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:  # surface API errors to the UI rather than a 500 page
+        return jsonify({"error": f"{type(e).__name__}: {e}"}), 502
+
     return jsonify(
         {
-            "answer": rag.render_answer(response),
+            "answer": answer,
             "usage": {
                 "input_tokens": usage.input_tokens,
-                "cache_read_input_tokens": getattr(usage, "cache_read_input_tokens", 0),
-                "cache_creation_input_tokens": getattr(
-                    usage, "cache_creation_input_tokens", 0
-                ),
                 "output_tokens": usage.output_tokens,
             },
         }
