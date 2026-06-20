@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Coding Copilot</title>
+  <style>
+    body { font-family: -apple-system, system-ui, sans-serif; max-width: 760px;
+           margin: 40px auto; padding: 0 16px; color: #1a1a1a; }
+    h1 { font-size: 1.4rem; }
+    textarea { width: 100%; padding: 12px; font-size: 1rem; border: 1px solid #ccc;
+               border-radius: 8px; box-sizing: border-box; }
+    button { margin-top: 10px; padding: 10px 18px; font-size: 1rem; border: 0;
+             border-radius: 8px; background: #2d6a4f; color: #fff; cursor: pointer; }
+    button:disabled { opacity: 0.5; cursor: default; }
+    .answer { margin-top: 24px; line-height: 1.5; white-space: pre-wrap; }
+    .cite { background: #eef6f1; border-left: 3px solid #2d6a4f; padding: 6px 10px;
+            margin: 8px 0; font-size: 0.85rem; color: #333; border-radius: 4px; }
+    .cite .pg { font-weight: 600; }
+    .usage { margin-top: 20px; font-size: 0.8rem; color: #888; }
+    .err { color: #b00020; margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <h1>🩺 Coding Copilot</h1>
+  <p>Describe the encounter or prescription. Get the billing/diagnostic codes,
+     each cited to the exact page of the manual.</p>
+  <textarea id="q" rows="3"
+    placeholder="e.g. Established patient, 15-min visit for type 2 diabetes management, adjusted metformin dose"></textarea>
+  <br />
+  <button id="go">Find codes</button>
+  <div id="out"></div>
+
+  <script>
+    const btn = document.getElementById("go");
+    const out = document.getElementById("out");
+
+    async function lookup() {
+      const question = document.getElementById("q").value.trim();
+      if (!question) return;
+      btn.disabled = true;
+      out.innerHTML = "<p>Searching the manual…</p>";
+      try {
+        const res = await fetch("/api/lookup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Request failed");
+        render(data);
+      } catch (e) {
+        out.innerHTML = `<p class="err">${e.message}</p>`;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function render(data) {
+      let html = "";
+      for (const block of data.answer) {
+        html += `<div class="answer">${escapeHtml(block.text)}</div>`;
+        for (const c of block.citations) {
+          const pg = c.start_page
+            ? `<span class="pg">p.${c.start_page}${c.end_page && c.end_page !== c.start_page ? "–" + c.end_page : ""}</span> — `
+            : "";
+          html += `<div class="cite">${pg}${escapeHtml(c.cited_text)}</div>`;
+        }
+      }
+      const u = data.usage;
+      html += `<div class="usage">in: ${u.input_tokens} · cache read: ${u.cache_read_input_tokens} · cache write: ${u.cache_creation_input_tokens} · out: ${u.output_tokens}</div>`;
+      out.innerHTML = html;
+    }
+
+    function escapeHtml(s) {
+      const d = document.createElement("div");
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    btn.addEventListener("click", lookup);
+    document.getElementById("q").addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) lookup();
+    });
+  </script>
+</body>
+</html>
