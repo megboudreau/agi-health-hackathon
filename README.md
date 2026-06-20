@@ -6,7 +6,7 @@ A no-login web app that takes a patient's active medication list — pasted text
 
 - **Multimodal input** — paste text, drop images, drop PDFs, or mix all three. Paste a screenshot with ⌘V.
 - **Clinical-pharmacist review** — normalized medication list, interaction flags (Severe / Moderate / Mild), inferred diagnoses, and recommended actions. Powered by Claude Opus 4.8 with adaptive thinking.
-- **Optional patient context** — attach lab results, referral letters, or free-text notes (eGFR, allergies, recent hospitalizations) to sharpen the analysis.
+- **Optional patient context** — attach lab results, referral letters, or handwritten clinical notes to sharpen the analysis.
 - **Add medication during visit** — type any drug name (English or French) to get an instant interaction check against the reviewed regimen and the matching RAMQ exception codes.
 - **RAMQ formulary lookup** — offline SQLite search across all 158 exception drugs and 242 codes. Bilingual: English or French input works; indication texts are returned in English. This is a bonus for Quebec practitioners
 
@@ -14,7 +14,7 @@ A no-login web app that takes a patient's active medication list — pasted text
 
 ```
 paste text / drop image / drop PDF
-  + optional patient context
+  + optional patient context (labs, handwritten notes, referral letters)
         │
         ▼
    Flask server
@@ -30,6 +30,46 @@ paste text / drop image / drop PDF
               ├─▶ Haiku  — translate French indications to English
               └─▶ Opus   — interaction check against existing regimen
 ```
+
+## Screenshots
+
+### Input — the app accepts whatever you have
+
+The medication list can be raw copy-paste from a pharmacy system (French headers, dates, quantities, noise included):
+
+![Raw medication list input](screenshots/input-medication-list.png)
+
+Patient context can be a photo of handwritten clinical notes:
+
+![Handwritten nephrologist notes](screenshots/input-patient-context.png)
+
+### UI walkthrough
+
+**Empty state**
+
+![Empty input](screenshots/ui-empty.png)
+
+**With messy copy-paste text and a handwritten note attached as context**
+
+![Input loaded](screenshots/ui-with-input.png)
+
+**Analyzing** (20–40 seconds with Opus 4.8 + adaptive thinking)
+
+![Analyzing](screenshots/ui-analyzing.png)
+
+### Output — 4-panel clinical review
+
+**Medication List + Clinical Flags** — normalized drug list extracted from raw input; flags colour-coded by severity with citations to the patient's own labs
+
+![Output grid top](screenshots/output-grid-top.png)
+
+**Inferred Diagnoses + Recommended Actions** — diagnoses inferred from the regimen cross-referenced with the clinical notes; prioritized action items with stop rules
+
+![Output grid bottom](screenshots/output-grid-bottom.png)
+
+**Explain** — click any flag or action to get a 2–3 sentence clinical explanation of the mechanism and the specific risk
+
+![Explain expanded](screenshots/output-explain.png)
 
 ## Setup
 
