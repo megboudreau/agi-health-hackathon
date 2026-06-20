@@ -2,6 +2,8 @@
 
 A no-login web app that takes a patient's active medication list — pasted text, a screenshot, a PDF, or any combination — and returns an expert clinical-pharmacist review. Physicians can also check a new drug mid-visit against the existing regimen, with RAMQ exception codes looked up automatically.
 
+[Walkthrough video](https://www.youtube.com/watch?v=Zet2glFgZ5A)
+
 ## Features
 
 - **Multimodal input** — paste text, drop images, drop PDFs, or mix all three. Paste a screenshot with ⌘V.
