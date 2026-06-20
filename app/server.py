@@ -73,13 +73,31 @@ def api_check_drug():
     if not new_drug:
         return jsonify({"error": "No drug provided"}), 400
 
-    # Local RAMQ formulary lookup (free, instant)
-    formulary_result = formulary.search(new_drug)  # list of matching entries
+    # Normalize input (handles EN or FR drug names) via Haiku
+    names = analyzer.resolve_drug(new_drug)
+    english_name = names.get("english", new_drug)
+    french_name = names.get("french", new_drug)
+    print(f"[check-drug] normalized: {new_drug!r} → EN={english_name!r} FR={french_name!r}", flush=True)
 
-    # Targeted Claude interaction check
+    # RAMQ formulary lookup — try raw input, then normalized names
+    formulary_result = (
+        formulary.search(new_drug) or
+        formulary.search(english_name) or
+        formulary.search(french_name)
+    )
+
+    # Translate French indication texts to English
+    if formulary_result and formulary_result.get("codes"):
+        french_texts = [c["indication"] for c in formulary_result["codes"]]
+        en_texts = analyzer.translate_indications(french_texts)
+        for i, code in enumerate(formulary_result["codes"]):
+            if i < len(en_texts):
+                code["indication"] = en_texts[i]
+
+    # Targeted Claude interaction check using the English INN name
     try:
-        analysis, usage = analyzer.check_drug(new_drug, current_analysis)
-        print(f"[check-drug] {new_drug} in={usage.input_tokens} out={usage.output_tokens}", flush=True)
+        analysis, usage = analyzer.check_drug(english_name, current_analysis)
+        print(f"[check-drug] {english_name} in={usage.input_tokens} out={usage.output_tokens}", flush=True)
     except Exception as e:
         return jsonify({"error": f"{type(e).__name__}: {e}"}), 502
 

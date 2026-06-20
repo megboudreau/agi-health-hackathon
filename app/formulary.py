@@ -49,12 +49,12 @@ def search(drug_name: str) -> dict | None:
         (q + "*",),
     ).fetchone()
 
-    # 2. Fallback: LIKE on name
+    # 2. Fallback: LIKE on name or brands
     if not row:
         row = _con.execute(
             "SELECT id, name, brands, section FROM drugs "
-            "WHERE name LIKE ? COLLATE NOCASE LIMIT 1",
-            (f"%{q}%",),
+            "WHERE name LIKE ? COLLATE NOCASE OR brands LIKE ? COLLATE NOCASE LIMIT 1",
+            (f"%{q}%", f"%{q}%"),
         ).fetchone()
 
     if not row:

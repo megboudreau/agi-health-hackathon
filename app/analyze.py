@@ -4,6 +4,8 @@ of a patient's active medication list and run it through a clinical-pharmacist
 prompt with Claude Opus 4.8 (vision + adaptive thinking).
 """
 import base64
+import json
+import re
 
 import anthropic
 
@@ -68,6 +70,50 @@ def analyze(text, files, patient_context="", context_files=None):
 
     answer = "".join(b.text for b in response.content if b.type == "text")
     return answer, response.usage
+
+
+HAIKU = "claude-haiku-4-5-20251001"
+
+
+def _haiku(prompt: str, max_tokens: int) -> str:
+    resp = client.messages.create(
+        model=HAIKU,
+        max_tokens=max_tokens,
+        system="You are a pharmacist assistant. Return ONLY valid JSON, no prose, no markdown fences.",
+        messages=[{"role": "user", "content": prompt}],
+    )
+    raw = "".join(b.text for b in resp.content if b.type == "text").strip()
+    raw = re.sub(r'^```(?:json)?\s*', '', raw)
+    raw = re.sub(r'\s*```$', '', raw)
+    return raw
+
+
+def resolve_drug(raw: str) -> dict:
+    """Normalize a drug name (English or French) → {english, french} INN names."""
+    text = _haiku(
+        f"Drug name entered by physician: {raw!r}\n"
+        'Return JSON: {"english": "<English INN generic name lowercase>", "french": "<French INN nom générique lowercase>"}',
+        120,
+    )
+    try:
+        return json.loads(text)
+    except Exception:
+        return {"english": raw, "french": raw}
+
+
+def translate_indications(texts: list) -> list:
+    """Translate a list of French RAMQ indication strings to English."""
+    text = _haiku(
+        f"Translate each French medical text to English. Return a JSON array in the same order:\n{json.dumps(texts)}",
+        max(400, len(texts) * 200),
+    )
+    try:
+        result = json.loads(text)
+        if isinstance(result, list) and len(result) == len(texts):
+            return result
+    except Exception:
+        pass
+    return texts
 
 
 def check_drug(new_drug: str, current_analysis: str):

@@ -31,9 +31,9 @@ SECTIONS = ["AI", "CV", "DE", "EN", "GI", "GU", "GY", "MS", "OP", "RE", "SN", "V
 
 # Sections known to be large get more output budget
 SECTION_MAX_TOKENS = {
-    "DE": 16000,  # Dermatology — large
-    "RE": 16000,  # Respiratory — large
-    "SN": 16000,  # Nervous system — large
+    "DE": 24000,  # Dermatology — very large
+    "RE": 16000,
+    "SN": 16000,
 }
 
 EXTRACT_PROMPT = """
@@ -66,17 +66,16 @@ Return ONLY the JSON array, no prose, no markdown fences.
 def extract_section(client: anthropic.Anthropic, pdf_b64: str, section: str) -> list[dict]:
     prompt = EXTRACT_PROMPT.format(section=section)
     max_tokens = SECTION_MAX_TOKENS.get(section, 8000)
-    response = client.messages.create(
-        model="claude-opus-4-8",
-        max_tokens=max_tokens,
-        messages=[{
-            "role": "user",
-            "content": [
-                {"type": "document", "source": {"type": "base64", "media_type": "application/pdf", "data": pdf_b64}},
-                {"type": "text", "text": prompt},
-            ],
-        }],
-    )
+    messages = [{
+        "role": "user",
+        "content": [
+            {"type": "document", "source": {"type": "base64", "media_type": "application/pdf", "data": pdf_b64}},
+            {"type": "text", "text": prompt},
+        ],
+    }]
+    params = dict(model="claude-opus-4-8", max_tokens=max_tokens, messages=messages)
+    with client.messages.stream(**params) as stream:
+        response = stream.get_final_message()
     raw = response.content[0].text.strip()
     raw = re.sub(r'^```(?:json)?\s*', '', raw)
     raw = re.sub(r'\s*```$', '', raw)
@@ -138,7 +137,7 @@ def _append_to_db(drugs: list[dict]) -> None:
                 "INSERT INTO codes(drug_id, code, indication) VALUES (?,?,?)",
                 (drug_id, c["code"], c["indication"]),
             )
-    con.execute("INSERT INTO drugs_fts(rowid, name, brands) SELECT id, name, brands FROM drugs WHERE id NOT IN (SELECT rowid FROM drugs_fts)")
+    con.execute("INSERT INTO drugs_fts(drugs_fts) VALUES('rebuild')")
     con.commit()
     con.close()
 
